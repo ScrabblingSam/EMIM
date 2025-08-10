@@ -1,0 +1,17 @@
+video_path,cluster,cluster_name
+datasets/inside_video_data/Not_drinking/1_nodrinking.mp4,1,not_drinking
+datasets/inside_video_data/Not_drinking/2_nodrinking.mp4,1,not_drinking
+datasets/inside_video_data/Not_drinking/3_nodrinking.mp4,1,not_drinking
+datasets/inside_video_data/Not_drinking/4_nodrinking.mp4,1,not_drinking
+datasets/inside_video_data/Not_drinking/5_nodrinking.mp4,0,drinking
+datasets/inside_video_data/Not_drinking/6_nodrinking.mp4,1,not_drinking
+datasets/inside_video_data/Not_drinking/7_nodrinking.mp4,1,not_drinking
+datasets/inside_video_data/Not_drinking/8_nodrinking.mp4,0,drinking
+datasets/inside_video_data/drinking/1_drinking.mp4,1,not_drinking
+datasets/inside_video_data/drinking/2_drinking.mp4,0,drinking
+datasets/inside_video_data/drinking/3_drinking.mp4,0,drinking
+datasets/inside_video_data/drinking/4_drinking.mp4,0,drinking
+datasets/inside_video_data/drinking/5_drinking.mp4,0,drinking
+datasets/inside_video_data/drinking/6_drinking.mp4,0,drinking
+datasets/inside_video_data/drinking/7_drinking.mp4,0,drinking
+datasets/inside_video_data/drinking/8_drinking.mp4,0,drinking
