@@ -15,14 +15,11 @@ Scripts:
 Install into your conda environment (example):
 
 ```bash
+# create a new conda environment
+conda env create -f environment.yml
+
 # Activate your environment first
 conda activate EMIM
-
-# Core libs
-conda install -y pytorch torchvision -c pytorch
-
-# Utilities for clustering and video I/O
-conda install -y scikit-learn av ffmpeg -c conda-forge
 ```
 
 Note: If you already have working torch/torchvision, you may install only `scikit-learn`, `av`, and `ffmpeg`.
@@ -79,7 +76,7 @@ This prints one of the cluster names (e.g., `drinking`, `not_drinking`, `cheatin
 - `--clip_len` (default: 16)
   - Number of raw frames per randomly sampled clip, before temporal subsampling.
   - Increase to 32 or 64 to give subsampling more frames to choose from.
-- `--clips_per_video` (default: 4)
+- `--clips_per_video` (default: 8)
   - Number of random clips sampled per video; more clips = more robust embedding.
 - Temporal subsampling inside the script
   - In `EMIM_model.py` and `EMIM_infer.py`, the transform includes:
