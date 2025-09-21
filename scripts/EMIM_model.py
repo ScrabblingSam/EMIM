@@ -185,24 +185,31 @@ def ensure_dirs(paths: List[str]) -> None:
 
 def infer_folder_label(video_path: str) -> Optional[int]:
     """Infer weak label from parent folder name.
-    Returns 0 for drinking, 1 for not_drinking, or None if unknown.
+    Returns 0 for drinking, 1 for not_drinking, 2 for cheating, or None if unknown.
     """
     parent = os.path.basename(os.path.dirname(video_path)).lower().replace('-', '_')
-    if 'drink' not in parent:
-        return None
-    # If any negation present with 'drink', treat as not_drinking
-    if any(tok in parent for tok in ['not', 'no', 'non']):
-        return 1
-    return 0
+    
+    # Check for cheating
+    if 'cheat' in parent:
+        return 2
+    
+    # Check for drinking categories
+    if 'drink' in parent:
+        # If any negation present with 'drink', treat as not_drinking
+        if any(tok in parent for tok in ['not', 'no', 'non']):
+            return 1
+        return 0
+    
+    return None
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Cluster videos into 2 groups (drinking, not_drinking) using pretrained r3d_18 features + KMeans")
+    parser = argparse.ArgumentParser(description="Cluster videos into 3 groups (drinking, not_drinking, cheating) using pretrained r3d_18 features + KMeans")
     parser.add_argument("--input_dir", required=True, help="Directory containing videos (mixed or in subfolders)")
     parser.add_argument("--output_dir", default="clusters_output", help="Directory to write clustering results")
     parser.add_argument("--clip_len", type=int, default=16, help="Frames per sampled clip before temporal subsample")
     parser.add_argument("--clips_per_video", type=int, default=8, help="Random clips sampled per video for robust embedding")
-    parser.add_argument("--names", nargs=2, default=["drinking", "not_drinking"], help="Names to assign to clusters 0..1")
+    parser.add_argument("--names", nargs=3, default=["drinking", "not_drinking", "cheating"], help="Names to assign to clusters 0..2")
     parser.add_argument("--device", default="auto", help="Device: auto|cpu|cuda|mps")
     args = parser.parse_args()
 
@@ -255,30 +262,50 @@ def main():
         return
 
     X = np.vstack(embeddings)
-    print(f"Clustering {X.shape[0]} videos into 2 groups...")
-    kmeans = KMeans(n_clusters=2, n_init=10, random_state=42)
+    print(f"Clustering {X.shape[0]} videos into 3 groups...")
+    kmeans = KMeans(n_clusters=3, n_init=10, random_state=42)
     labels = kmeans.fit_predict(X)
 
     # Map KMeans clusters to semantic labels using folder names
-    # We evaluate two permutations (0->drinking/1->not_drinking) vs swapped and pick the better.
+    # We evaluate all permutations of (0->drinking/1->not_drinking/2->cheating) and pick the best
     weak = [infer_folder_label(p) for p in kept_paths]
-    def score(mapping01: List[int]) -> int:
+    
+    def score_mapping(mapping: List[int]) -> int:
         s = 0
         for cl, wl in zip(labels, weak):
             if wl is None:
                 continue
-            if mapping01[int(cl)] == wl:
+            if mapping[int(cl)] == wl:
                 s += 1
         return s
-    map_a = [0, 1]  # cluster 0 -> drinking(0), cluster 1 -> not_drinking(1)
-    map_b = [1, 0]  # swapped
-    chosen = map_a if score(map_a) >= score(map_b) else map_b
-    # Remap clusters to 0(drinking)/1(not_drinking)
-    remapped = [chosen[int(c)] for c in labels]
+    
+    # Try all 6 permutations of 3 classes
+    from itertools import permutations
+    best_score = -1
+    best_mapping = None
+    for perm in permutations([0, 1, 2]):
+        score = score_mapping(list(perm))
+        if score > best_score:
+            best_score = score
+            best_mapping = list(perm)
+    
+    # Remap clusters to 0(drinking)/1(not_drinking)/2(cheating)
+    remapped = [best_mapping[int(c)] for c in labels]
 
-    # Prepare output dir (only for CSV)
+    # Prepare output dir
     out_root = os.path.abspath(args.output_dir)
     ensure_dirs([out_root])
+
+    # Save cluster centers for inference
+    centers_path = os.path.join(out_root, "kmeans.npz")
+    # Remap centers according to our best mapping
+    remapped_centers = np.zeros_like(kmeans.cluster_centers_)
+    for orig_idx, new_idx in enumerate(best_mapping):
+        remapped_centers[new_idx] = kmeans.cluster_centers_[orig_idx]
+    
+    np.savez(centers_path, 
+             centers=remapped_centers, 
+             names=np.array(args.names))
 
     # Save CSV
     csv_path = os.path.join(out_root, "clusters.csv")
@@ -291,7 +318,9 @@ def main():
             writer.writerow([vp, c, cname])
 
     print(f"Done. Results saved to: {out_root}")
+    print(f"- Cluster centers: {centers_path}")
     print(f"- CSV summary: {csv_path}")
+    print(f"- Best mapping score: {best_score}/{len([w for w in weak if w is not None])}")
 
 
 if __name__ == "__main__":

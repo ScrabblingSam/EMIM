@@ -30,7 +30,7 @@ def build_transform() -> ApplyTransformToKey:
         key="video",
         transform=Compose(
             [
-                UniformTemporalSubsample(8),
+                UniformTemporalSubsample(16),  # Changed from 8 to 16 to match model
                 ShortSideScale(min_size=256),
                 CenterCropVideo(224),
                 NormalizeVideo(mean=(0.45, 0.45, 0.45), std=(0.225, 0.225, 0.225)),
